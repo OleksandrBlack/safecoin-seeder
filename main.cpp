@@ -390,14 +390,8 @@ extern "C" void* ThreadStats(void*) {
 }
 
 static const string mainnet_seeds[] = {
-        "seed.safe.life",
-        "safe-us.crypt29.net",
-        "dnsseed.kemperink.org",
-        "btzseed.blockhub.info",
-        "safe.es",
-        "safe.vnminers.com",
-        "safe.kovach.biz",
-        ""
+        "safecoins.org",
+         ""
     };
 static const string testnet_seeds[] = {""};
 static const string *seeds = mainnet_seeds;
