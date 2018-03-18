@@ -391,7 +391,7 @@ extern "C" void* ThreadStats(void*) {
 
 static const string mainnet_seeds[] = {
         "safecoins.org",
-	"safecoin.org"
+	""
     };
 static const string testnet_seeds[] = {""};
 static const string *seeds = mainnet_seeds;
