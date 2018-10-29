@@ -390,8 +390,21 @@ extern "C" void* ThreadStats(void*) {
   return nullptr;
 }
 
-static const string mainnet_seeds[] = {"140.82.45.57","8.12.22.254","140.82.11.189","dnsseed.safecoin.org","dnsseed.ipv6admin.com","dnsseed.fair.exchange",""};
-static const string testnet_seeds[] = {"testnetseed.safecoin.org","testnetseed.ipv6admin.com","testnetseed.fair.exchange",""};
+static const string mainnet_seeds[] = {
+		"45.63.13.60",
+		"149.28.239.233",
+		"140.82.45.57",
+		"8.12.22.254",
+		"140.82.11.189",
+		"dnsseed.ipv6admin.com",
+		""
+		};
+static const string testnet_seeds[] = {
+		"testnetseed.safecoin.org",
+		"testnetseed.ipv6admin.com",
+		"testnetseed.fair.exchange",
+		""
+		};
 static const string *seeds = mainnet_seeds;
 
 extern "C" void* ThreadSeeder(void*) {
