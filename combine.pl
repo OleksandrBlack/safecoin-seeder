@@ -1,7 +1,6 @@
 #!/usr/bin/perl -w
 
 use strict;
-use warnings FATAL => 'all';
 
 sub loadFile {
   my ($file) = @_;
