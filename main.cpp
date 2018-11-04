@@ -391,12 +391,13 @@ extern "C" void* ThreadStats(void*) {
 }
 
 static const string mainnet_seeds[] = {
-		"45.63.13.60",
-		"149.28.239.233",
-		"140.82.45.57",
-		"8.12.22.254",
-		"140.82.11.189",
-		"dnsseed.ipv6admin.com",
+		"dnsseedua.local.support",	// UA dnsseeder
+		"dnsseed.ipv6admin.com",	// USA dnsseeder
+		"140.82.45.57",				// USA seed node
+		"8.12.22.254",				// USA seed node
+		"140.82.11.189",			// USA seed node
+		"185.20.184.51",			// NLD seed node
+		"45.63.13.60",				// USA seed node
 		""
 		};
 static const string testnet_seeds[] = {
