@@ -50,7 +50,7 @@ class CNode {
     if (nHeaderStart == -1) return;
     unsigned int nSize = vSend.size() - nMessageStart;
     memcpy((char*)&vSend[nHeaderStart] + offsetof(CMessageHeader, nMessageSize), &nSize, sizeof(nSize));
-    if (vSend.GetVersion() >= 209) {
+    if (vSend.GetVersion() >= 212) {
       uint256 hash = Hash(vSend.begin() + nMessageStart, vSend.end());
       unsigned int nChecksum = 0;
       memcpy(&nChecksum, &hash, sizeof(nChecksum));
@@ -109,15 +109,15 @@ class CNode {
         vRecv >> addrFrom >> nNonce;
       if (nVersion >= 106 && !vRecv.empty())
         vRecv >> strSubVer;
-      if (nVersion >= 209 && !vRecv.empty())
+      if (nVersion >= 212 && !vRecv.empty())
         vRecv >> nStartingHeight;
       
-      if (nVersion >= 209) {
+      if (nVersion >= 212) {
         BeginMessage("verack");
         EndMessage();
       }
       vSend.SetVersion(min(nVersion, PROTOCOL_VERSION));
-      if (nVersion < 209) {
+      if (nVersion < 212) {
         this->vRecv.SetVersion(min(nVersion, PROTOCOL_VERSION));
         GotVersion();
       }
@@ -186,7 +186,7 @@ class CNode {
         vRecv.insert(vRecv.begin(), vHeaderSave.begin(), vHeaderSave.end());
         break;
       }
-      if (vRecv.GetVersion() >= 209) {
+      if (vRecv.GetVersion() >= 212) {
         uint256 hash = Hash(vRecv.begin(), vRecv.begin() + nMessageSize);
         unsigned int nChecksum = 0;
         memcpy(&nChecksum, &hash, sizeof(nChecksum));
@@ -208,8 +208,8 @@ public:
     vRecv.SetType(SER_NETWORK);
     vRecv.SetVersion(0);
     if (time(NULL) > 1329696000) {
-      vSend.SetVersion(209);
-      vRecv.SetVersion(209);
+      vSend.SetVersion(212);
+      vRecv.SetVersion(212);
     }
   }
   bool Run() {
