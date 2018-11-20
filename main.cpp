@@ -398,6 +398,7 @@ static const string mainnet_seeds[] = {
 		"140.82.11.189",			// USA seed node
 		"185.20.184.51",			// NLD seed node
 		"45.63.13.60",				// USA seed node
+		"176.107.179.32",			// UA seed node
 		""
 		};
 static const string testnet_seeds[] = {
