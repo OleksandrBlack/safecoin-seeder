@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2011 The Bitcoin developers
+// Copyright (c) 2018 SafeCoin DEV Team
 // Distributed under the MIT/X11 software license, see the accompanying
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 
@@ -22,7 +23,7 @@ static const char* ppszTypeName[] =
     "block",
 };
 
-unsigned char pchMessageStart[4] = { 0xf1, 0xed, 0xe2, 0x8f };
+unsigned char pchMessageStart[4] = { 0xF1, 0xED, 0xE2, 0x8F };
 
 CMessageHeader::CMessageHeader()
 {
