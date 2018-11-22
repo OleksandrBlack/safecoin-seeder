@@ -390,22 +390,18 @@ extern "C" void* ThreadStats(void*) {
 }
 
 static const string mainnet_seeds[] = {
-		"dnsseedua.local.support",	// UA dnsseeder
-		"dnsseed.ipv6admin.com",	// USA dnsseeder
-		"140.82.45.57",				// USA seed node
-		"8.12.22.254",				// USA seed node
-		"140.82.11.189",			// USA seed node
-		"185.20.184.51",			// NLD seed node
-		"45.63.13.60",				// USA seed node
-		""
-		};
-static const string testnet_seeds[] = {
-		"testnetseed.safecoin.org",
-		"testnetseed.ipv6admin.com",
-		"testnetseed.fair.exchange",
-		""
-		};
-static const string *seeds = mainnet_seeds;
+	"dnsseed.ipv6admin.com",
+	"dnsseedua.local.support",
+	"140.82.45.57",
+	"8.12.22.254",
+	"140.82.11.189",
+	"185.20.184.51",
+	"176.107.179.32",
+	"45.63.13.60",
+	""
+	};
+static const string testnet_seeds[] = {""};
+static const string *seeds          = mainnet_seeds;
 
 extern "C" void* ThreadSeeder(void*) {
   //if (!fTestNet){
