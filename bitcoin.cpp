@@ -50,7 +50,7 @@ class CNode {
     if (nHeaderStart == -1) return;
     unsigned int nSize = vSend.size() - nMessageStart;
     memcpy((char*)&vSend[nHeaderStart] + offsetof(CMessageHeader, nMessageSize), &nSize, sizeof(nSize));
-    if (vSend.GetVersion() >= 212) {
+    if (vSend.GetVersion() >= 209) {
       uint256 hash = Hash(vSend.begin() + nMessageStart, vSend.end());
       unsigned int nChecksum = 0;
       memcpy(&nChecksum, &hash, sizeof(nChecksum));
@@ -80,7 +80,7 @@ class CNode {
     CAddress me(CService("0.0.0.0"));
     BeginMessage("version");
     int nBestHeight = GetRequireHeight();
-    string ver = "/safecoinseeder:0.02/";
+    string ver = "/safe-seeder:0.02/";
     vSend << PROTOCOL_VERSION << nLocalServices << nTime << you << me << nLocalNonce << ver << nBestHeight;
     EndMessage();
   }
@@ -109,15 +109,15 @@ class CNode {
         vRecv >> addrFrom >> nNonce;
       if (nVersion >= 106 && !vRecv.empty())
         vRecv >> strSubVer;
-      if (nVersion >= 212 && !vRecv.empty())
+      if (nVersion >= 209 && !vRecv.empty())
         vRecv >> nStartingHeight;
       
-      if (nVersion >= 212) {
+      if (nVersion >= 209) {
         BeginMessage("verack");
         EndMessage();
       }
       vSend.SetVersion(min(nVersion, PROTOCOL_VERSION));
-      if (nVersion < 212) {
+      if (nVersion < 209) {
         this->vRecv.SetVersion(min(nVersion, PROTOCOL_VERSION));
         GotVersion();
       }
@@ -186,7 +186,7 @@ class CNode {
         vRecv.insert(vRecv.begin(), vHeaderSave.begin(), vHeaderSave.end());
         break;
       }
-      if (vRecv.GetVersion() >= 212) {
+      if (vRecv.GetVersion() >= 209) {
         uint256 hash = Hash(vRecv.begin(), vRecv.begin() + nMessageSize);
         unsigned int nChecksum = 0;
         memcpy(&nChecksum, &hash, sizeof(nChecksum));
@@ -208,8 +208,8 @@ public:
     vRecv.SetType(SER_NETWORK);
     vRecv.SetVersion(0);
     if (time(NULL) > 1329696000) {
-      vSend.SetVersion(212);
-      vRecv.SetVersion(212);
+      vSend.SetVersion(209);
+      vRecv.SetVersion(209);
     }
   }
   bool Run() {
