@@ -11,6 +11,7 @@
 #ifndef __INCLUDED_PROTOCOL_H__
 #define __INCLUDED_PROTOCOL_H__
 
+#include "coin.h"
 #include "netbase.h"
 #include "serialize.h"
 #include <string>
@@ -19,7 +20,7 @@
 extern bool fTestNet;
 static inline unsigned short GetDefaultPort(const bool testnet = fTestNet)
 {
-    return testnet ? 18770 : 8770;
+    return testnet ? testnet_port : mainnet_port;
 }
 
 //
@@ -28,8 +29,6 @@ static inline unsigned short GetDefaultPort(const bool testnet = fTestNet)
 //  (12) command
 //  (4) size
 //  (4) checksum
-
-extern unsigned char pchMessageStart[4];
 
 class CMessageHeader
 {
@@ -45,7 +44,7 @@ class CMessageHeader
              READWRITE(FLATDATA(pchMessageStart));
              READWRITE(FLATDATA(pchCommand));
              READWRITE(nMessageSize);
-             if (nVersion >= 209)
+             if (nVersion >= INIT_PROTO_VERSION)
              READWRITE(nChecksum);
             )
 
