@@ -458,14 +458,17 @@ bool ConnectSocket(const CService &addrDest, SOCKET& hSocketRet, int nTimeout)
     const proxyType &proxy = proxyInfo[addrDest.GetNetwork()];
 
     // no proxy needed
-    if (!proxy.second)
+    if (!proxy.second){
+      if(!ConnectSocketDirectly(addrDest, hSocketRet, nTimeout))
         return ConnectSocketDirectly(addrDest, hSocketRet, nTimeout);
+      return ConnectSocketDirectly(addrDest, hSocketRet, nTimeout);
+    }
 
     SOCKET hSocket = INVALID_SOCKET;
 
     // first connect to proxy server
     if (!ConnectSocketDirectly(proxy.first, hSocket, nTimeout))
-        return false;
+      return false;
 
     // do socks negotiation
     switch (proxy.second) {

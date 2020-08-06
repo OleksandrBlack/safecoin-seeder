@@ -218,6 +218,7 @@ public:
     if (!ConnectSocket(you, sock)) return false;
     PushVersion();
     Send();
+        
     int64 now;
     while (now = time(NULL), ban == 0 && (doneAfter == 0 || doneAfter > now) && sock != INVALID_SOCKET) {
       char pchBuf[0x10000];
@@ -242,15 +243,15 @@ public:
       if (nBytes > 0) {
         vRecv.resize(nPos + nBytes);
         memcpy(&vRecv[nPos], pchBuf, nBytes);
-      } //else if (nBytes == 0) {
-//printf("%s: BAD (connection closed prematurely)\n", ToString(you).c_str());
-        //res = false;
-        //break;
-      //} else {
-//printf("%s: BAD (connection error)\n", ToString(you).c_str());
-        //res = false;
-        //break;
-      //}
+      } else if (nBytes == 0) {
+printf("%s: BAD (connection closed prematurely)\n", ToString(you).c_str());
+        res = false;
+        break;
+      } else {
+printf("%s: BAD (connection error)\n", ToString(you).c_str());
+        res = false;
+        break;
+      }
       ProcessMessages();
       Send();
     }
