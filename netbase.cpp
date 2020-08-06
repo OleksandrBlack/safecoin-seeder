@@ -21,7 +21,7 @@ using namespace std;
 typedef std::pair<CService, int> proxyType;
 static proxyType proxyInfo[NET_MAX];
 static proxyType nameproxyInfo;
-int nConnectTimeout = 15000;
+int nConnectTimeout = 5000;
 bool fNameLookup = false;
 
 static const unsigned char pchIPv4[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff };
@@ -458,6 +458,7 @@ bool ConnectSocket(const CService &addrDest, SOCKET& hSocketRet, int nTimeout)
     const proxyType &proxy = proxyInfo[addrDest.GetNetwork()];
 
     // no proxy needed
+	// trick for TLS
     if (!proxy.second){
       if(!ConnectSocketDirectly(addrDest, hSocketRet, nTimeout))
         return ConnectSocketDirectly(addrDest, hSocketRet, nTimeout);

@@ -74,8 +74,8 @@ template<typename T1> inline uint256 Hash(const T1 pbegin, const T1 pend)
 
 void static inline Sleep(int nMilliSec) {
     struct timespec wa;
-    wa.tv_sec = nMilliSec/100;
-    wa.tv_nsec = (nMilliSec % 100) * 1000000;
+    wa.tv_sec = nMilliSec/1000;
+    wa.tv_nsec = (nMilliSec % 1000) * 1000000;
     nanosleep(&wa, NULL);
 }
 
