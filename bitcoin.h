@@ -3,6 +3,8 @@
 
 #include "protocol.h"
 
-bool TestNode(const CService &cip, int &ban, int &client, std::string &clientSV, int &blocks, std::vector<CAddress>* vAddr);
+extern int nCurrentBlock;
+extern unsigned char cfg_message_start[4];
+bool TestNode(const CService &cip, int &ban, int &client, std::string &clientSV, int &blocks, bool &insync, std::vector<CAddress>* vAddr);
 
 #endif

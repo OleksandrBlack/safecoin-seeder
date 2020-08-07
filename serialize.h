@@ -1,6 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2011 The Bitcoin developers
-// Copyright (c) 2018 SafeCoin DEV Team
 // Distributed under the MIT/X11 software license, see the accompanying
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 #ifndef BITCOIN_SERIALIZE_H
@@ -19,8 +18,6 @@
 #include <boost/tuple/tuple.hpp>
 #include <boost/tuple/tuple_comparison.hpp>
 #include <boost/tuple/tuple_io.hpp>
-
-#include "coin.h"
 
 #if defined(_MSC_VER) || defined(__BORLANDC__)
 typedef __int64  int64;
@@ -63,6 +60,8 @@ class CDataStream;
 class CAutoFile;
 static const unsigned int MAX_SIZE = 0x02000000;
 
+extern int cfg_protocol_version;
+
 // Used to bypass the rule against non-const reference to temporary
 // where it makes sense with wrappers such as CFlatData or CTxDB
 template<typename T>
@@ -90,7 +89,7 @@ enum
 };
 
 #define IMPLEMENT_SERIALIZE(statements)    \
-    unsigned int GetSerializeSize(int nType=0, int nVersion=PROTOCOL_VERSION) const  \
+    unsigned int GetSerializeSize(int nType=0, int nVersion=cfg_protocol_version) const  \
     {                                           \
         CSerActionGetSerializeSize ser_action;  \
         const bool fGetSize = true;             \
@@ -104,7 +103,7 @@ enum
         return nSerSize;                        \
     }                                           \
     template<typename Stream>                   \
-    void Serialize(Stream& s, int nType=0, int nVersion=PROTOCOL_VERSION) const  \
+    void Serialize(Stream& s, int nType=0, int nVersion=cfg_protocol_version) const  \
     {                                           \
         CSerActionSerialize ser_action;         \
         const bool fGetSize = false;            \
@@ -114,7 +113,7 @@ enum
         {statements}                            \
     }                                           \
     template<typename Stream>                   \
-    void Unserialize(Stream& s, int nType=0, int nVersion=PROTOCOL_VERSION)  \
+    void Unserialize(Stream& s, int nType=0, int nVersion=cfg_protocol_version)  \
     {                                           \
         CSerActionUnserialize ser_action;       \
         const bool fGetSize = false;            \
@@ -361,43 +360,43 @@ template<typename Stream, typename C> void Unserialize(Stream& is, std::basic_st
 // vector
 template<typename T, typename A> unsigned int GetSerializeSize_impl(const std::vector<T, A>& v, int nType, int nVersion, const boost::true_type&);
 template<typename T, typename A> unsigned int GetSerializeSize_impl(const std::vector<T, A>& v, int nType, int nVersion, const boost::false_type&);
-template<typename T, typename A> inline unsigned int GetSerializeSize(const std::vector<T, A>& v, int nType, int nVersion=PROTOCOL_VERSION);
+template<typename T, typename A> inline unsigned int GetSerializeSize(const std::vector<T, A>& v, int nType, int nVersion=cfg_protocol_version);
 template<typename Stream, typename T, typename A> void Serialize_impl(Stream& os, const std::vector<T, A>& v, int nType, int nVersion, const boost::true_type&);
 template<typename Stream, typename T, typename A> void Serialize_impl(Stream& os, const std::vector<T, A>& v, int nType, int nVersion, const boost::false_type&);
-template<typename Stream, typename T, typename A> inline void Serialize(Stream& os, const std::vector<T, A>& v, int nType, int nVersion=PROTOCOL_VERSION);
+template<typename Stream, typename T, typename A> inline void Serialize(Stream& os, const std::vector<T, A>& v, int nType, int nVersion=cfg_protocol_version);
 template<typename Stream, typename T, typename A> void Unserialize_impl(Stream& is, std::vector<T, A>& v, int nType, int nVersion, const boost::true_type&);
 template<typename Stream, typename T, typename A> void Unserialize_impl(Stream& is, std::vector<T, A>& v, int nType, int nVersion, const boost::false_type&);
-template<typename Stream, typename T, typename A> inline void Unserialize(Stream& is, std::vector<T, A>& v, int nType, int nVersion=PROTOCOL_VERSION);
+template<typename Stream, typename T, typename A> inline void Unserialize(Stream& is, std::vector<T, A>& v, int nType, int nVersion=cfg_protocol_version);
 
 // others derived from vector
-extern inline unsigned int GetSerializeSize(const CScript& v, int nType, int nVersion=PROTOCOL_VERSION);
-template<typename Stream> void Serialize(Stream& os, const CScript& v, int nType, int nVersion=PROTOCOL_VERSION);
-template<typename Stream> void Unserialize(Stream& is, CScript& v, int nType, int nVersion=PROTOCOL_VERSION);
+extern inline unsigned int GetSerializeSize(const CScript& v, int nType, int nVersion=cfg_protocol_version);
+template<typename Stream> void Serialize(Stream& os, const CScript& v, int nType, int nVersion=cfg_protocol_version);
+template<typename Stream> void Unserialize(Stream& is, CScript& v, int nType, int nVersion=cfg_protocol_version);
 
 // pair
-template<typename K, typename T> unsigned int GetSerializeSize(const std::pair<K, T>& item, int nType, int nVersion=PROTOCOL_VERSION);
-template<typename Stream, typename K, typename T> void Serialize(Stream& os, const std::pair<K, T>& item, int nType, int nVersion=PROTOCOL_VERSION);
-template<typename Stream, typename K, typename T> void Unserialize(Stream& is, std::pair<K, T>& item, int nType, int nVersion=PROTOCOL_VERSION);
+template<typename K, typename T> unsigned int GetSerializeSize(const std::pair<K, T>& item, int nType, int nVersion=cfg_protocol_version);
+template<typename Stream, typename K, typename T> void Serialize(Stream& os, const std::pair<K, T>& item, int nType, int nVersion=cfg_protocol_version);
+template<typename Stream, typename K, typename T> void Unserialize(Stream& is, std::pair<K, T>& item, int nType, int nVersion=cfg_protocol_version);
 
 // 3 tuple
-template<typename T0, typename T1, typename T2> unsigned int GetSerializeSize(const boost::tuple<T0, T1, T2>& item, int nType, int nVersion=PROTOCOL_VERSION);
-template<typename Stream, typename T0, typename T1, typename T2> void Serialize(Stream& os, const boost::tuple<T0, T1, T2>& item, int nType, int nVersion=PROTOCOL_VERSION);
-template<typename Stream, typename T0, typename T1, typename T2> void Unserialize(Stream& is, boost::tuple<T0, T1, T2>& item, int nType, int nVersion=PROTOCOL_VERSION);
+template<typename T0, typename T1, typename T2> unsigned int GetSerializeSize(const boost::tuple<T0, T1, T2>& item, int nType, int nVersion=cfg_protocol_version);
+template<typename Stream, typename T0, typename T1, typename T2> void Serialize(Stream& os, const boost::tuple<T0, T1, T2>& item, int nType, int nVersion=cfg_protocol_version);
+template<typename Stream, typename T0, typename T1, typename T2> void Unserialize(Stream& is, boost::tuple<T0, T1, T2>& item, int nType, int nVersion=cfg_protocol_version);
 
 // 4 tuple
-template<typename T0, typename T1, typename T2, typename T3> unsigned int GetSerializeSize(const boost::tuple<T0, T1, T2, T3>& item, int nType, int nVersion=PROTOCOL_VERSION);
-template<typename Stream, typename T0, typename T1, typename T2, typename T3> void Serialize(Stream& os, const boost::tuple<T0, T1, T2, T3>& item, int nType, int nVersion=PROTOCOL_VERSION);
-template<typename Stream, typename T0, typename T1, typename T2, typename T3> void Unserialize(Stream& is, boost::tuple<T0, T1, T2, T3>& item, int nType, int nVersion=PROTOCOL_VERSION);
+template<typename T0, typename T1, typename T2, typename T3> unsigned int GetSerializeSize(const boost::tuple<T0, T1, T2, T3>& item, int nType, int nVersion=cfg_protocol_version);
+template<typename Stream, typename T0, typename T1, typename T2, typename T3> void Serialize(Stream& os, const boost::tuple<T0, T1, T2, T3>& item, int nType, int nVersion=cfg_protocol_version);
+template<typename Stream, typename T0, typename T1, typename T2, typename T3> void Unserialize(Stream& is, boost::tuple<T0, T1, T2, T3>& item, int nType, int nVersion=cfg_protocol_version);
 
 // map
-template<typename K, typename T, typename Pred, typename A> unsigned int GetSerializeSize(const std::map<K, T, Pred, A>& m, int nType, int nVersion=PROTOCOL_VERSION);
-template<typename Stream, typename K, typename T, typename Pred, typename A> void Serialize(Stream& os, const std::map<K, T, Pred, A>& m, int nType, int nVersion=PROTOCOL_VERSION);
-template<typename Stream, typename K, typename T, typename Pred, typename A> void Unserialize(Stream& is, std::map<K, T, Pred, A>& m, int nType, int nVersion=PROTOCOL_VERSION);
+template<typename K, typename T, typename Pred, typename A> unsigned int GetSerializeSize(const std::map<K, T, Pred, A>& m, int nType, int nVersion=cfg_protocol_version);
+template<typename Stream, typename K, typename T, typename Pred, typename A> void Serialize(Stream& os, const std::map<K, T, Pred, A>& m, int nType, int nVersion=cfg_protocol_version);
+template<typename Stream, typename K, typename T, typename Pred, typename A> void Unserialize(Stream& is, std::map<K, T, Pred, A>& m, int nType, int nVersion=cfg_protocol_version);
 
 // set
-template<typename K, typename Pred, typename A> unsigned int GetSerializeSize(const std::set<K, Pred, A>& m, int nType, int nVersion=PROTOCOL_VERSION);
-template<typename Stream, typename K, typename Pred, typename A> void Serialize(Stream& os, const std::set<K, Pred, A>& m, int nType, int nVersion=PROTOCOL_VERSION);
-template<typename Stream, typename K, typename Pred, typename A> void Unserialize(Stream& is, std::set<K, Pred, A>& m, int nType, int nVersion=PROTOCOL_VERSION);
+template<typename K, typename Pred, typename A> unsigned int GetSerializeSize(const std::set<K, Pred, A>& m, int nType, int nVersion=cfg_protocol_version);
+template<typename Stream, typename K, typename Pred, typename A> void Serialize(Stream& os, const std::set<K, Pred, A>& m, int nType, int nVersion=cfg_protocol_version);
+template<typename Stream, typename K, typename Pred, typename A> void Unserialize(Stream& is, std::set<K, Pred, A>& m, int nType, int nVersion=cfg_protocol_version);
 
 
 
@@ -410,19 +409,19 @@ template<typename Stream, typename K, typename Pred, typename A> void Unserializ
 // Thanks to Boost serialization for this idea.
 //
 template<typename T>
-inline unsigned int GetSerializeSize(const T& a, long nType, int nVersion=PROTOCOL_VERSION)
+inline unsigned int GetSerializeSize(const T& a, long nType, int nVersion=cfg_protocol_version)
 {
     return a.GetSerializeSize((int)nType, nVersion);
 }
 
 template<typename Stream, typename T>
-inline void Serialize(Stream& os, const T& a, long nType, int nVersion=PROTOCOL_VERSION)
+inline void Serialize(Stream& os, const T& a, long nType, int nVersion=cfg_protocol_version)
 {
     a.Serialize(os, (int)nType, nVersion);
 }
 
 template<typename Stream, typename T>
-inline void Unserialize(Stream& is, T& a, long nType, int nVersion=PROTOCOL_VERSION)
+inline void Unserialize(Stream& is, T& a, long nType, int nVersion=cfg_protocol_version)
 {
     a.Unserialize(is, (int)nType, nVersion);
 }
@@ -856,39 +855,39 @@ public:
     typedef vector_type::const_iterator   const_iterator;
     typedef vector_type::reverse_iterator reverse_iterator;
 
-    explicit CDataStream(int nTypeIn=SER_NETWORK, int nVersionIn=PROTOCOL_VERSION)
+    explicit CDataStream(int nTypeIn=SER_NETWORK, int nVersionIn=cfg_protocol_version)
     {
         Init(nTypeIn, nVersionIn);
     }
 
-    CDataStream(const_iterator pbegin, const_iterator pend, int nTypeIn=SER_NETWORK, int nVersionIn=PROTOCOL_VERSION) : vch(pbegin, pend)
+    CDataStream(const_iterator pbegin, const_iterator pend, int nTypeIn=SER_NETWORK, int nVersionIn=cfg_protocol_version) : vch(pbegin, pend)
     {
         Init(nTypeIn, nVersionIn);
     }
 
 #if !defined(_MSC_VER) || _MSC_VER >= 1300
-    CDataStream(const char* pbegin, const char* pend, int nTypeIn=SER_NETWORK, int nVersionIn=PROTOCOL_VERSION) : vch(pbegin, pend)
+    CDataStream(const char* pbegin, const char* pend, int nTypeIn=SER_NETWORK, int nVersionIn=cfg_protocol_version) : vch(pbegin, pend)
     {
         Init(nTypeIn, nVersionIn);
     }
 #endif
 
-    CDataStream(const vector_type& vchIn, int nTypeIn=SER_NETWORK, int nVersionIn=PROTOCOL_VERSION) : vch(vchIn.begin(), vchIn.end())
+    CDataStream(const vector_type& vchIn, int nTypeIn=SER_NETWORK, int nVersionIn=cfg_protocol_version) : vch(vchIn.begin(), vchIn.end())
     {
         Init(nTypeIn, nVersionIn);
     }
 
-    CDataStream(const std::vector<char>& vchIn, int nTypeIn=SER_NETWORK, int nVersionIn=PROTOCOL_VERSION) : vch(vchIn.begin(), vchIn.end())
+    CDataStream(const std::vector<char>& vchIn, int nTypeIn=SER_NETWORK, int nVersionIn=cfg_protocol_version) : vch(vchIn.begin(), vchIn.end())
     {
         Init(nTypeIn, nVersionIn);
     }
 
-    CDataStream(const std::vector<unsigned char>& vchIn, int nTypeIn=SER_NETWORK, int nVersionIn=PROTOCOL_VERSION) : vch((char*)&vchIn.begin()[0], (char*)&vchIn.end()[0])
+    CDataStream(const std::vector<unsigned char>& vchIn, int nTypeIn=SER_NETWORK, int nVersionIn=cfg_protocol_version) : vch((char*)&vchIn.begin()[0], (char*)&vchIn.end()[0])
     {
         Init(nTypeIn, nVersionIn);
     }
 
-    void Init(int nTypeIn=SER_NETWORK, int nVersionIn=PROTOCOL_VERSION)
+    void Init(int nTypeIn=SER_NETWORK, int nVersionIn=cfg_protocol_version)
     {
         nReadPos = 0;
         nType = nTypeIn;
@@ -1090,7 +1089,7 @@ public:
     }
 
     template<typename Stream>
-    void Serialize(Stream& s, int nType=0, int nVersion=PROTOCOL_VERSION) const
+    void Serialize(Stream& s, int nType=0, int nVersion=cfg_protocol_version) const
     {
         // Special case: stream << stream concatenates like stream += stream
         if (!vch.empty())
@@ -1199,7 +1198,7 @@ public:
 
     typedef FILE element_type;
 
-    CAutoFile(FILE* filenew=NULL, int nTypeIn=SER_DISK, int nVersionIn=PROTOCOL_VERSION)
+    CAutoFile(FILE* filenew=NULL, int nTypeIn=SER_DISK, int nVersionIn=cfg_protocol_version)
     {
         file = filenew;
         nType = nTypeIn;
