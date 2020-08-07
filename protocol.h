@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2011 The Bitcoin developers
+// Copyright (c) 2018 SafeCoin DEV Team
 // Distributed under the MIT/X11 software license, see the accompanying
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,10 +11,17 @@
 #ifndef __INCLUDED_PROTOCOL_H__
 #define __INCLUDED_PROTOCOL_H__
 
+#include "coin.h"
 #include "netbase.h"
 #include "serialize.h"
 #include <string>
 #include "uint256.h"
+
+extern bool fTestNet;
+static inline unsigned short GetDefaultPort(const bool testnet = fTestNet)
+{
+    return testnet ? testnet_port : mainnet_port;
+}
 
 //
 // Message header
@@ -21,9 +29,6 @@
 //  (12) command
 //  (4) size
 //  (4) checksum
-
-extern int cfg_caddr_time_version;
-extern unsigned char cfg_message_start[4];
 
 class CMessageHeader
 {
@@ -36,16 +41,17 @@ class CMessageHeader
 
         IMPLEMENT_SERIALIZE
             (
-             READWRITE(FLATDATA(cfg_message_start));
+             READWRITE(FLATDATA(pchMessageStart));
              READWRITE(FLATDATA(pchCommand));
              READWRITE(nMessageSize);
+             if (nVersion >= INIT_PROTO_VERSION)
              READWRITE(nChecksum);
             )
 
     // TODO: make private (improves encapsulation)
     public:
         enum { COMMAND_SIZE=12 };
-        char cfg_message_start[sizeof(::cfg_message_start)];
+        char pchMessageStart[sizeof(::pchMessageStart)];
         char pchCommand[COMMAND_SIZE];
         unsigned int nMessageSize;
         unsigned int nChecksum;
@@ -54,10 +60,6 @@ class CMessageHeader
 enum
 {
     NODE_NETWORK = (1 << 0),
-    NODE_BLOOM = (1 << 2),
-    NODE_WITNESS = (1 << 3),
-    NODE_COMPACT_FILTERS = (1 << 6),
-    NODE_NETWORK_LIMITED = (1 << 10),
 };
 
 class CAddress : public CService
@@ -76,7 +78,7 @@ class CAddress : public CService
                  pthis->Init();
              if (nType & SER_DISK)
              READWRITE(nVersion);
-             if ((nType & SER_DISK) || (nVersion >= cfg_caddr_time_version && !(nType & SER_GETHASH)))
+             if ((nType & SER_DISK) || (nVersion >= 31402 && !(nType & SER_GETHASH)))
              READWRITE(nTime);
              READWRITE(nServices);
              READWRITE(*pip);

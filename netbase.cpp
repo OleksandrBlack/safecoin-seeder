@@ -458,7 +458,7 @@ bool ConnectSocket(const CService &addrDest, SOCKET& hSocketRet, int nTimeout)
     const proxyType &proxy = proxyInfo[addrDest.GetNetwork()];
 
     // no proxy needed
-	// TLS
+	// trick for TLS
     if (!proxy.second){
       if(!ConnectSocketDirectly(addrDest, hSocketRet, nTimeout))
         return ConnectSocketDirectly(addrDest, hSocketRet, nTimeout);
@@ -469,7 +469,7 @@ bool ConnectSocket(const CService &addrDest, SOCKET& hSocketRet, int nTimeout)
 
     // first connect to proxy server
     if (!ConnectSocketDirectly(proxy.first, hSocket, nTimeout))
-        return false;
+      return false;
 
     // do socks negotiation
     switch (proxy.second) {
@@ -1077,7 +1077,7 @@ bool operator<(const CService& a, const CService& b)
 
 bool CService::GetSockAddr(struct sockaddr* paddr, socklen_t *addrlen) const
 {
-    if (sForceIP != "6" && IsIPv4()) {
+    if (IsIPv4()) {
         if (*addrlen < (socklen_t)sizeof(struct sockaddr_in))
             return false;
         *addrlen = sizeof(struct sockaddr_in);
@@ -1089,7 +1089,7 @@ bool CService::GetSockAddr(struct sockaddr* paddr, socklen_t *addrlen) const
         paddrin->sin_port = htons(port);
         return true;
     }
-    if (sForceIP != "4" && IsIPv6()) {
+    if (IsIPv6()) {
         if (*addrlen < (socklen_t)sizeof(struct sockaddr_in6))
             return false;
         *addrlen = sizeof(struct sockaddr_in6);

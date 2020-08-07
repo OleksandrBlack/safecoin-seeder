@@ -10,7 +10,6 @@
 #include "serialize.h"
 #include "compat.h"
 
-extern std::string sForceIP;
 extern int nConnectTimeout;
 
 #ifdef WIN32

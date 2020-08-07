@@ -8,54 +8,34 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <atomic>
-#include <iostream>
-#include <string>
-#include <curl/curl.h>
-#include <libconfig.h++>
+
 #include "bitcoin.h"
 #include "db.h"
 
 using namespace std;
-using namespace libconfig;
 
-bool fDumpAll = false;
-bool bCurrentBlockFromExplorer = false;
-string sForceIP;
-string sCurrentBlock;
-int nCurrentBlock = -1;
-int nDefaultBlockHeight = -1;
-
-int cfg_protocol_version;
-int cfg_init_proto_version;
-int cfg_min_peer_proto_version;
-int cfg_caddr_time_version;
-unsigned char cfg_message_start[4];
-int cfg_wallet_port;
-string cfg_explorer_url;
-string cfg_explorer_url2;
-int cfg_explorer_requery_seconds;
+bool fTestNet = false;
 
 class CDnsSeedOpts {
 public:
   int nThreads;
   int nPort;
   int nDnsThreads;
+  int fUseTestNet;
   int fWipeBan;
   int fWipeIgnore;
-  int fDumpAll;
   const char *mbox;
   const char *ns;
   const char *host;
   const char *tor;
   const char *ipv4_proxy;
   const char *ipv6_proxy;
-  const char *force_ip;
   std::set<uint64_t> filter_whitelist;
 
-  CDnsSeedOpts() : nThreads(96), nDnsThreads(4), nPort(53), mbox(NULL), ns(NULL), host(NULL), tor(NULL), fWipeBan(false), fWipeIgnore(false), fDumpAll(false), ipv4_proxy(NULL), ipv6_proxy(NULL), force_ip("a") {}
+  CDnsSeedOpts() : nThreads(96), nDnsThreads(4), nPort(53), mbox(NULL), ns(NULL), host(NULL), tor(NULL), fUseTestNet(false), fWipeBan(false), fWipeIgnore(false), ipv4_proxy(NULL), ipv6_proxy(NULL) {}
 
   void ParseCommandLine(int argc, char **argv) {
-    static const char *help = "SAFECOIN-SEEDER\n"
+    static const char *help = "SafeCoin-seeder\n"
                               "Usage: %s -h <host> -n <ns> [-m <mbox>] [-t <threads>] [-p <port>]\n"
                               "\n"
                               "Options:\n"
@@ -69,11 +49,9 @@ public:
                               "-i <ip:port>    IPV4 SOCKS5 proxy IP/Port\n"
                               "-k <ip:port>    IPV6 SOCKS5 proxy IP/Port\n"
                               "-w f1,f2,...    Allow these flag combinations as filters\n"
-                              "-f <ip version> Force connections to nodes of a specific ip type\n"
-                              "                valid options: a = all, 4 = IPv4, 6 = IPv6 (default a)\n"
+                              "--testnet       Use testnet\n"
                               "--wipeban       Wipe list of banned nodes\n"
                               "--wipeignore    Wipe list of ignored nodes\n"
-                              "--dumpall       Dump all unique nodes\n"
                               "-?, --help      Show this text\n"
                               "\n";
     bool showHelp = false;
@@ -90,15 +68,14 @@ public:
         {"proxyipv4", required_argument, 0, 'i'},
         {"proxyipv6", required_argument, 0, 'k'},
         {"filter", required_argument, 0, 'w'},
-        {"forceip", required_argument, 0, 'f'},
+        {"testnet", no_argument, &fUseTestNet, 1},
         {"wipeban", no_argument, &fWipeBan, 1},
-        {"wipeignore", no_argument, &fWipeIgnore, 1},
-        {"dumpall", no_argument, &fDumpAll, 1},
-        {"help", no_argument, 0, '?'},
+        {"wipeignore", no_argument, &fWipeBan, 1},
+        {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}
       };
       int option_index = 0;
-      int c = getopt_long(argc, argv, "h:n:m:t:p:d:o:i:k:w:f:?", long_options, &option_index);
+      int c = getopt_long(argc, argv, "h:n:m:t:p:d:o:i:k:w:", long_options, &option_index);
       if (c == -1) break;
       switch (c) {
         case 'h': {
@@ -163,11 +140,6 @@ public:
           break;
         }
 
-        case 'f': {
-          force_ip = optarg;
-          break;
-        }
-
         case '?': {
           showHelp = true;
           break;
@@ -175,26 +147,19 @@ public:
       }
     }
     if (filter_whitelist.empty()) {
-        filter_whitelist.insert(NODE_NETWORK);
-        filter_whitelist.insert(NODE_NETWORK | NODE_BLOOM);
-        filter_whitelist.insert(NODE_NETWORK | NODE_WITNESS);
-        filter_whitelist.insert(NODE_NETWORK | NODE_WITNESS | NODE_COMPACT_FILTERS);
-        filter_whitelist.insert(NODE_NETWORK | NODE_WITNESS | NODE_BLOOM);
-        filter_whitelist.insert(NODE_NETWORK_LIMITED);
-        filter_whitelist.insert(NODE_NETWORK_LIMITED | NODE_BLOOM);
-        filter_whitelist.insert(NODE_NETWORK_LIMITED | NODE_WITNESS);
-        filter_whitelist.insert(NODE_NETWORK_LIMITED | NODE_WITNESS | NODE_COMPACT_FILTERS);
-        filter_whitelist.insert(NODE_NETWORK_LIMITED | NODE_WITNESS | NODE_BLOOM);
+        filter_whitelist.insert(1);
+        filter_whitelist.insert(5);
+        filter_whitelist.insert(9);
+        filter_whitelist.insert(13);
     }
     if (host != NULL && ns == NULL) showHelp = true;
-    if (showHelp) {
-        fprintf(stderr, help, argv[0]);
-        exit(0);
-    }
+    if (showHelp) fprintf(stderr, help, argv[0]);
   }
 };
 
+extern "C" {
 #include "dns.h"
+}
 
 CAddrDb db;
 
@@ -218,9 +183,8 @@ extern "C" void* ThreadCrawler(void* data) {
       res.nClientV = 0;
       res.nHeight = 0;
       res.strClientV = "";
-	  res.bInSync = false;
       bool getaddr = res.ourLastSuccess + 86400 < now;
-      res.fGood = TestNode(res.service,res.nBanTime,res.nClientV,res.strClientV,res.nHeight,res.bInSync,getaddr ? &addr : NULL);
+      res.fGood = TestNode(res.service,res.nBanTime,res.nClientV,res.strClientV,res.nHeight,getaddr ? &addr : NULL);
     }
     db.ResultMany(ips);
     db.Add(addr);
@@ -366,133 +330,6 @@ int StatCompare(const CAddrReport& a, const CAddrReport& b) {
   }
 }
 
-bool is_numeric(char *string) {
-    int sizeOfString = strlen(string);
-    int iteration = 0;
-    bool isNumeric = true;
-
-    if (sizeOfString > 0) {
-        while(iteration < sizeOfString)
-        {
-            if (!isdigit(string[iteration]))
-            {
-                isNumeric = false;
-                break;
-            }
-
-            iteration++;
-        }
-    } else {
-        isNumeric = false;
-    }
-
-    return isNumeric;
-}
-
-const char* charReplace(const char *str, char ch1, char ch2)
-{
-    char *newStr = new char[strlen(str)+1];
-    int n = 0;
-
-    while(*str!='\0')
-    {
-        if (*str == ch1) {
-            newStr[n] = ch2;
-        } else {
-            newStr[n] = *str;
-        }
-        str++;
-        n++;
-    }
-    newStr[n] = '\0';
-    return (const char *)newStr;
-}
-
-size_t writeCallback(char* buf, size_t size, size_t nmemb, void* up) {
-    for (int c = 0; c<size*nmemb; c++) {
-        sCurrentBlock.push_back(buf[c]);
-    }
-    return size*nmemb; //tell curl how many bytes we handled
-}
-
-int readBlockHeightFromExplorer(string sExplorerURL) {
-    int nReturn = -1;
-
-    sCurrentBlock = "";
-    CURL* curl;
-    curl_global_init(CURL_GLOBAL_ALL);
-    curl = curl_easy_init();
-    curl_easy_setopt(curl, CURLOPT_URL, sExplorerURL.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &writeCallback);
-    curl_easy_perform(curl);
-    curl_easy_cleanup(curl);
-    curl_global_cleanup();
-
-    if (!sCurrentBlock.empty() && is_numeric(&sCurrentBlock[0u])) {
-        // Block height from explorer was read successfully
-        nReturn = std::stoi(sCurrentBlock);
-    }
-
-    return nReturn;
-}
-
-int hex_string_to_int(std::string sHexString) {
-    int x;   
-    std::stringstream ss;
-    ss << std::hex << sHexString;
-    ss >> x;
-    return x;
-}
-
-extern "C" void* ThreadBlockReader(void*) {
-	// Check if block explorer 1 is set
-	if (cfg_explorer_url != "") {
-		do {
-			// Read from block explorer 1
-			int nReturnBlock = readBlockHeightFromExplorer(cfg_explorer_url);
-
-			if (nReturnBlock == -1 || nReturnBlock == nCurrentBlock) {
-				// Block explorer 1 failed to return a proper block height or the value is the same as the previous value
-				// Check if block explorer 2 is set
-				if (cfg_explorer_url2 != "") {
-					// Save the value from explorer 1
-					int nReturnBlockSave = nReturnBlock;
-					// Read from block explorer 2
-					nReturnBlock = readBlockHeightFromExplorer(cfg_explorer_url2);
-
-					if (nReturnBlockSave == -1 && nReturnBlock == -1) {
-						// Block explorer 2 failed to return a proper block height
-						nCurrentBlock = nDefaultBlockHeight;
-						bCurrentBlockFromExplorer = false;
-					} else {
-						// Block explorer 2 returned a block height
-						// Compare and take the higher value from both block explorers
-						nCurrentBlock = (nReturnBlock > nReturnBlockSave ? nReturnBlock : nReturnBlockSave);
-						nDefaultBlockHeight = nCurrentBlock;
-						bCurrentBlockFromExplorer = true;
-					}
-				} else {
-					// No block explorer 2 is set
-					nCurrentBlock = (nReturnBlock == -1 ? nDefaultBlockHeight : nReturnBlock);
-					bCurrentBlockFromExplorer = nReturnBlock != -1;
-				}
-			} else {
-				// Block explorer 1 returned a block height
-				nCurrentBlock = nReturnBlock;
-				nDefaultBlockHeight = nCurrentBlock;
-				bCurrentBlockFromExplorer = true;
-			}
-				
-			Sleep(cfg_explorer_requery_seconds * 1000);
-		} while(1);
-	} else {
-		// No block explorers are set so default to getting the hardcoded block height
-		nCurrentBlock = nDefaultBlockHeight;
-		bCurrentBlockFromExplorer = false;
-	}
-	return nullptr;
-}
-
 extern "C" void* ThreadDumper(void*) {
   int count = 0;
   do {
@@ -511,21 +348,11 @@ extern "C" void* ThreadDumper(void*) {
         rename("dnsseed.dat.new", "dnsseed.dat");
       }
       FILE *d = fopen("dnsseed.dump", "w");
-	  fprintf(d, "# address                                        good  lastSuccess    %%(2h)   %%(8h)   %%(1d)   %%(7d)  %%(30d)  blocks      svcs  version\n");
+      fprintf(d, "# address                                        good  lastSuccess    %%(2h)   %%(8h)   %%(1d)   %%(7d)  %%(30d)  blocks      svcs  version\n");
       double stat[5]={0,0,0,0,0};
       for (vector<CAddrReport>::const_iterator it = v.begin(); it < v.end(); it++) {
         CAddrReport rep = *it;
-
-		if (fDumpAll) {
-			// Show complete list of nodes with all applicable info gathered for each
-			char cversionbuffer[7];
-			snprintf(cversionbuffer, 7, "%d", rep.clientVersion);
-			char blockbuffer[9];
-			snprintf(blockbuffer, 9, "%d", rep.blocks);
-			fprintf(d, "%-47s  %4d  %11" PRId64 "  %6.2f%% %6.2f%% %6.2f%% %6.2f%% %6.2f%%  %s  %08" PRIx64 "  %s \"%s\"\n", rep.ip.ToString().c_str(), rep.fGood && rep.blocks>0 && rep.clientVersion>0 && strlen(rep.clientSubVersion.c_str())>0?1:0, rep.lastSuccess, 100.0*rep.uptime[0], 100.0*rep.uptime[1], 100.0*rep.uptime[2], 100.0*rep.uptime[3], 100.0*rep.uptime[4], rep.blocks<1?"Unknown":blockbuffer, rep.services, rep.clientVersion<1?"Unknown":cversionbuffer, strlen(rep.clientSubVersion.c_str())==0?"Unknown":rep.clientSubVersion.c_str());
-		} else
-			fprintf(d, "%-47s  %4d  %11" PRId64 "  %6.2f%% %6.2f%% %6.2f%% %6.2f%% %6.2f%%  %6i  %08" PRIx64 "  %5i \"%s\"\n", rep.ip.ToString().c_str(), (int)rep.fGood, rep.lastSuccess, 100.0*rep.uptime[0], 100.0*rep.uptime[1], 100.0*rep.uptime[2], 100.0*rep.uptime[3], 100.0*rep.uptime[4], rep.blocks, rep.services, rep.clientVersion, rep.clientSubVersion.c_str());
-
+        fprintf(d, "%-47s  %4d  %11" PRId64 "  %6.2f%% %6.2f%% %6.2f%% %6.2f%% %6.2f%%  %6i  %08" PRIx64 "  %5i \"%s\"\n", rep.ip.ToString().c_str(), (int)rep.fGood, rep.lastSuccess, 100.0*rep.uptime[0], 100.0*rep.uptime[1], 100.0*rep.uptime[2], 100.0*rep.uptime[3], 100.0*rep.uptime[4], rep.blocks, rep.services, rep.clientVersion, rep.clientSubVersion.c_str());
         stat[0] += rep.uptime[0];
         stat[1] += rep.uptime[1];
         stat[2] += rep.uptime[2];
@@ -570,16 +397,18 @@ extern "C" void* ThreadStats(void*) {
   return nullptr;
 }
 
-string sSeeds[10];
-string *seeds = sSeeds;
+static const string *seeds          = mainnet_seeds;
 
 extern "C" void* ThreadSeeder(void*) {
+  //if (!fTestNet){
+  //  db.Add(CService("kjy2eqzk4zwi5zd3.onion", 8770), true);
+  //}
   do {
     for (int i=0; seeds[i] != ""; i++) {
       vector<CNetAddr> ips;
       LookupHost(seeds[i].c_str(), ips);
       for (vector<CNetAddr>::iterator it = ips.begin(); it != ips.end(); it++) {
-        db.Add(CService(*it, cfg_wallet_port), true);
+        db.Add(CService(*it, GetDefaultPort()), true);
       }
     }
     Sleep(1800000);
@@ -588,117 +417,6 @@ extern "C" void* ThreadSeeder(void*) {
 }
 
 int main(int argc, char **argv) {
-  Config cfg;
-  string sConfigName = "settings.conf";
-  
-  try {
-    cfg.readFile(sConfigName.c_str());
-  } catch(const FileIOException &fioex) {
-    std::cerr << "Error: cannot open " + sConfigName << std::endl;
-    return(EXIT_FAILURE);
-  } catch(const ParseException &pex) {
-    std::cerr << "Parse error at " << pex.getFile() << ":" << pex.getLine()
-              << " - " << pex.getError() << std::endl;
-    return(EXIT_FAILURE);
-  }
-  
-  try {
-    cfg_protocol_version = std::stoi(cfg.lookup("protocol_version").c_str());
-  } catch(const SettingNotFoundException &nfex) {
-    cerr << "Error: Missing 'protocol_version' setting in configuration file." << endl;
-	return(EXIT_FAILURE);
-  }
-
-  try {
-    cfg_init_proto_version = std::stoi(cfg.lookup("init_proto_version").c_str());
-  } catch(const SettingNotFoundException &nfex) {
-    cerr << "Error: Missing 'init_proto_version' setting in configuration file." << endl;
-	return(EXIT_FAILURE);
-  }
-
-  try {
-    cfg_min_peer_proto_version = std::stoi(cfg.lookup("min_peer_proto_version").c_str());
-  } catch(const SettingNotFoundException &nfex) {
-    // If the value is not properly set, then default min_peer_proto_version to the protocol_version
-    cfg_min_peer_proto_version = cfg_protocol_version;
-  }
-
-  try {
-    cfg_caddr_time_version = std::stoi(cfg.lookup("caddr_time_version").c_str());
-  } catch(const SettingNotFoundException &nfex) {
-    cerr << "Error: Missing 'caddr_time_version' setting in configuration file." << endl;
-	return(EXIT_FAILURE);
-  }
-
-  for (int i=0; i<4; i++) {
-	  try {
-        cfg_message_start[i] = static_cast<char>(hex_string_to_int(cfg.lookup("pchMessageStart_" + std::to_string(i)).c_str()));
-	  } catch(const SettingNotFoundException &nfex) {
-		cerr << "Error: Missing 'pchMessageStart_" + std::to_string(i) + "' setting in configuration file." << endl;
-		return(EXIT_FAILURE);
-	  }
-  }
-
-  try {
-    cfg_wallet_port = std::stoi(cfg.lookup("wallet_port").c_str());
-  } catch(const SettingNotFoundException &nfex) {
-    cerr << "Error: Missing 'wallet_port' setting in configuration file." << endl;
-	return(EXIT_FAILURE);
-  }
-  
-  try {
-    cfg_explorer_url = cfg.lookup("explorer_url").c_str();
-  } catch(const SettingNotFoundException &nfex) {
-    cfg_explorer_url = "";
-  }
-  
-  try {
-    cfg_explorer_url2 = cfg.lookup("second_explorer_url").c_str();
-	if (cfg_explorer_url2 != "" && cfg_explorer_url == "") {
-		cfg_explorer_url = cfg_explorer_url2;
-		cfg_explorer_url2 = "";
-	}
-  } catch(const SettingNotFoundException &nfex) {
-	  cfg_explorer_url2 = "";
-  }  
-
-  try {
-      if (is_numeric(const_cast<char*>(cfg.lookup("explorer_requery_seconds").c_str()))) {
-          cfg_explorer_requery_seconds = std::stoi(cfg.lookup("explorer_requery_seconds").c_str());
-          if (cfg_explorer_requery_seconds < 1) {
-              cerr << "Error: 'explorer_requery_seconds' setting must be greater than zero." << endl;
-              return(EXIT_FAILURE);
-          }
-      } else {
-          // Default to 60 seconds
-          cfg_explorer_requery_seconds = 60;
-      }
-  } catch(const SettingNotFoundException &nfex) {
-    if (cfg_explorer_url != "" || cfg_explorer_url2 != "") {
-      cerr << "Error: Missing 'explorer_requery_seconds' setting in configuration file." << endl;
-      return(EXIT_FAILURE);
-    } else {
-      cfg_explorer_requery_seconds = 0;
-    }
-  }
-
-  try {
-	nDefaultBlockHeight = std::stoi(cfg.lookup("block_count").c_str());
-	nCurrentBlock = nDefaultBlockHeight;
-  } catch(const SettingNotFoundException &nfex) {
-    cerr << "Error: Missing 'block_count' setting in configuration file." << endl;
-	return(EXIT_FAILURE);
-  }
-
-  for (int i=1; i<=10; i++) {
-	  try {
-		sSeeds[i-1] = cfg.lookup("seed_" + std::to_string(i)).c_str();
-	  } catch(const SettingNotFoundException &nfex) {
-		cerr << "Error: Missing 'seed_0" + std::to_string(i) + "' setting in configuration file." << endl;
-		return(EXIT_FAILURE);
-	  }
-  }
-
   signal(SIGPIPE, SIG_IGN);
   setbuf(stdout, NULL);
   CDnsSeedOpts opts;
@@ -732,11 +450,13 @@ int main(int argc, char **argv) {
       SetProxy(NET_IPV6, service);
     }
   }
-  if (strcmp(opts.force_ip, "A") != 0 && strcmp(opts.force_ip, "a") != 0 && strcmp(opts.force_ip, "4") != 0 && strcmp(opts.force_ip, "6") != 0) {
-    fprintf(stderr, "Invalid force ip option. Valid options are: a = all (default), 4 = IPv4, 6 = IPv6.\n");
-    exit(1);
-  }
   bool fDNS = true;
+  if (opts.fUseTestNet) {
+      printf("Using testnet.\n");
+	  std::copy(std::begin(pchMessageStart_testnet), std::end(pchMessageStart_testnet), std::begin(pchMessageStart));
+      seeds = testnet_seeds;
+      fTestNet = true;
+  }
   if (!opts.ns) {
     printf("No nameserver set. Not starting DNS server.\n");
     fDNS = false;
@@ -745,12 +465,9 @@ int main(int argc, char **argv) {
     fprintf(stderr, "No hostname set. Please use -h.\n");
     exit(1);
   }
-  if (opts.mbox == NULL) {
-    // No email set. Initialize to "" string
-    opts.mbox = "";
-  } else {
-    // Email is set. Replace "@" with "."
-    opts.mbox = charReplace(opts.mbox, '@', '.');
+  if (fDNS && !opts.mbox) {
+    fprintf(stderr, "No e-mail address set. Please use -m.\n");
+    exit(1);
   }
   FILE *f = fopen("dnsseed.dat","r");
   if (f) {
@@ -763,12 +480,7 @@ int main(int argc, char **argv) {
         db.ResetIgnores();
     printf("done\n");
   }
-  fDumpAll = opts.fDumpAll;
-  sForceIP.assign(opts.force_ip, strlen(opts.force_ip));
-  pthread_t threadBlock, threadDns, threadSeed, threadDump, threadStats;
-  printf("Starting block reader...");
-  pthread_create(&threadBlock, NULL, ThreadBlockReader, NULL);
-  printf("done\n");
+  pthread_t threadDns, threadSeed, threadDump, threadStats;
   if (fDNS) {
     printf("Starting %i DNS threads for %s on %s (port %i)...", opts.nDnsThreads, opts.host, opts.ns, opts.nPort);
     dnsThread.clear();

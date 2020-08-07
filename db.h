@@ -6,19 +6,18 @@
 #include <vector>
 #include <deque>
 
+#include "coin.h"
 #include "netbase.h"
 #include "protocol.h"
 #include "util.h"
 
 #define MIN_RETRY 1000
 
-extern bool bCurrentBlockFromExplorer;
-extern int nCurrentBlock;
-extern int cfg_protocol_version;
-extern int cfg_init_proto_version;
-extern int cfg_min_peer_proto_version;
-extern int cfg_wallet_port;
-extern std::string cfg_explorer_url;
+static inline int GetRequireHeight(const bool testnet = fTestNet)
+{
+    // return testnet ? 500000 : 350000;
+    return 0;
+}
 
 std::string static inline ToString(const CService &ip) {
   std::string str = ip.ToString();
@@ -81,7 +80,6 @@ private:
   int total;
   int success;
   std::string clientSubVersion;
-  bool insync;
 public:
   CAddrInfo() : services(0), lastTry(0), ourLastTry(0), ourLastSuccess(0), ignoreTill(0), clientVersion(0), blocks(0), total(0), success(0) {}
   
@@ -101,25 +99,27 @@ public:
     ret.services = services;
     return ret;
   }
-
+  
   bool IsGood() const {
-    if (ip.GetPort() != cfg_wallet_port) return false;
-    if (!(services & NODE_NETWORK)) return false;
-    if (!ip.IsRoutable()) return false;
-    if (clientVersion && clientVersion < cfg_min_peer_proto_version) return false;
-    if (!insync) return false;
+	if (ip.GetPort() != GetDefaultPort()) return false;
+	if (!(services & NODE_NETWORK)) return false;
+	if (!ip.IsRoutable()) return false;
+	if (clientVersion && clientVersion < REQUIRE_VERSION) return false;
+	if (blocks && blocks < GetRequireHeight()) return false;
+
     if (total <= 3 && success * 2 >= total) return true;
+
     if (stat2H.reliability > 0.85 && stat2H.count > 2) return true;
     if (stat8H.reliability > 0.70 && stat8H.count > 4) return true;
     if (stat1D.reliability > 0.55 && stat1D.count > 8) return true;
     if (stat1W.reliability > 0.45 && stat1W.count > 16) return true;
     if (stat1M.reliability > 0.35 && stat1M.count > 32) return true;
-
+    
     return false;
   }
   int GetBanTime() const {
-    if (clientVersion && clientVersion < cfg_min_peer_proto_version) { return 604800; }
     if (IsGood()) return 0;
+    if (clientVersion && clientVersion < minimunClientVersion) { return 604800; }
     if (stat1M.reliability - stat1M.weight + 1.0 < 0.15 && stat1M.count > 32) { return 30*86400; }
     if (stat1W.reliability - stat1W.weight + 1.0 < 0.10 && stat1W.count > 16) { return 7*86400; }
     if (stat1D.reliability - stat1D.weight + 1.0 < 0.05 && stat1D.count > 8) { return 1*86400; }
@@ -139,7 +139,7 @@ public:
   friend class CAddrDb;
   
   IMPLEMENT_SERIALIZE (
-    unsigned char version = 1;
+    unsigned char version = 4;
     READWRITE(version);
     READWRITE(ip);
     READWRITE(services);
@@ -153,14 +153,20 @@ public:
       READWRITE(stat8H);
       READWRITE(stat1D);
       READWRITE(stat1W);
-      READWRITE(stat1M);
+      if (version >= 1)
+          READWRITE(stat1M);
+      else
+          if (!fWrite)
+              *((CAddrStat*)(&stat1M)) = stat1W;
       READWRITE(total);
       READWRITE(success);
       READWRITE(clientVersion);
-      READWRITE(clientSubVersion);
-      READWRITE(blocks);
-      READWRITE(ourLastSuccess);
-      READWRITE(insync);
+      if (version >= 2)
+          READWRITE(clientSubVersion);
+      if (version >= 3)
+          READWRITE(blocks);
+      if (version >= 4)
+          READWRITE(ourLastSuccess);
     }
   )
 };
@@ -183,7 +189,6 @@ struct CServiceResult {
     int nClientV;
     std::string strClientV;
     int64 ourLastSuccess;
-    bool bInSync;
 };
 
 //             seen nodes
@@ -193,8 +198,6 @@ struct CServiceResult {
 //               tracked nodes   (b) unknown nodes   (e) active nodes
 //              /           \
 //     (d) good nodes   (c) non-good nodes 
-
-extern bool fDumpAll;
 
 class CAddrDb {
 private:
@@ -212,7 +215,7 @@ protected:
   void Add_(const CAddress &addr, bool force);   // add an address
   bool Get_(CServiceResult &ip, int& wait);      // get an IP to test (must call Good_, Bad_, or Skipped_ on result afterwards)
   bool GetMany_(std::vector<CServiceResult> &ips, int max, int& wait);
-  void Good_(const CService &ip, int clientV, std::string clientSV, int blocks, bool insync); // mark an IP as good (must have been returned by Get_)
+  void Good_(const CService &ip, int clientV, std::string clientSV, int blocks); // mark an IP as good (must have been returned by Get_)
   void Bad_(const CService &ip, int ban);  // mark an IP as bad (and optionally ban it) (must have been returned by Get_)
   void Skipped_(const CService &ip);       // mark an IP as skipped (must have been returned by Get_)
   int Lookup_(const CService &ip);         // look up id of an IP
@@ -243,9 +246,9 @@ public:
     SHARED_CRITICAL_BLOCK(cs) {
       for (std::deque<int>::const_iterator it = ourId.begin(); it != ourId.end(); it++) {
         const CAddrInfo &info = idToInfo[*it];
-
-		if (fDumpAll || info.success > 0)
+        if (info.success > 0) {
           ret.push_back(info.GetReport());
+        }
       }
     }
     return ret;
@@ -310,9 +313,17 @@ public:
       for (int i=0; i<vAddr.size(); i++)
         Add_(vAddr[i], fForce);
   }
+  void Good(const CService &addr, int clientVersion, std::string clientSubVersion, int blocks) {
+    CRITICAL_BLOCK(cs)
+      Good_(addr, clientVersion, clientSubVersion, blocks);
+  }
   void Skipped(const CService &addr) {
     CRITICAL_BLOCK(cs)
       Skipped_(addr);
+  }
+  void Bad(const CService &addr, int ban = 0) {
+    CRITICAL_BLOCK(cs)
+      Bad_(addr, ban);
   }
   bool Get(CServiceResult &ip, int& wait) {
     CRITICAL_BLOCK(cs)
@@ -333,7 +344,7 @@ public:
     CRITICAL_BLOCK(cs) {
       for (int i=0; i<ips.size(); i++) {
         if (ips[i].fGood) {
-          Good_(ips[i].service, ips[i].nClientV, ips[i].strClientV, ips[i].nHeight, ips[i].bInSync);
+          Good_(ips[i].service, ips[i].nClientV, ips[i].strClientV, ips[i].nHeight);
         } else {
           Bad_(ips[i].service, ips[i].nBanTime);
         }
