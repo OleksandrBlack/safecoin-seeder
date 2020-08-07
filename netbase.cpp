@@ -469,7 +469,7 @@ bool ConnectSocket(const CService &addrDest, SOCKET& hSocketRet, int nTimeout)
 
     // first connect to proxy server
     if (!ConnectSocketDirectly(proxy.first, hSocket, nTimeout))
-      return false;
+        return false;
 
     // do socks negotiation
     switch (proxy.second) {

@@ -39,6 +39,6 @@ static unsigned char pchMessageStart_testnet[4] = { 0x5B, 0x1E, 0x7F, 0x63 };
 
 #define REQUIRE_VERSION 170022
 static const int minimunClientVersion = 170022;
-static const int PROTOCOL_VERSION = 170022; //Upcoming SafeNodes Update
+static const int PROTOCOL_VERSION = 170023; //dnsseders run
 static const int INIT_PROTO_VERSION = 212;
 #endif // __INCLUDED_COIN_H__
