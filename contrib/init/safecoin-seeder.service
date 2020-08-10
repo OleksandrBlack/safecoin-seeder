@@ -3,9 +3,13 @@ Description=Safecoin Seeder
 After=network.target
 
 [Service]
+WorkingDirectory=${HOME}/safecoin-seeder
 ExecStart=/usr/local/bin/dnsseed -h dnsseed.example.com -n vps.example.com -m satoshin.gmx.com
 User=root
 Group=root
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=safecoin-seeder
 
 Restart=on-failure
 PrivateTmp=true
