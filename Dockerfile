@@ -1,12 +1,9 @@
-FROM debian:stretch-slim as build
+FROM zencash/gosu-base:1.11
 
 # Install our build dependencies
 RUN apt-get update \
-  && apt-get install -y \
-    build-essential \
-    libboost-all-dev \
-    libssl-dev \
-  && rm -rf /var/lib/apt/lists/*
+    && DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install apt-utils \
+    && DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install git build-essential libboost-all-dev libssl-dev ca-certificates wget \
 
 COPY . /usr/local/src
 
@@ -14,15 +11,12 @@ WORKDIR /usr/local/src
   
 RUN make
 
-FROM debian:stretch-slim
+FROM zencash/gosu-base:1.11
 
 # Install our run dependencies
 RUN apt-get update \
-  && apt-get install -y \
-    build-essential \
-    libboost-all-dev \
-    libssl-dev \
-  && rm -rf /var/lib/apt/lists/*
+    && DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install apt-utils \
+    && DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install git build-essential libboost-all-dev libssl-dev ca-certificates wget \
 
 WORKDIR /usr/local/bin
 
