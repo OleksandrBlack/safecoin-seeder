@@ -34,7 +34,7 @@ uninstall:
 	systemctl stop safecoin-seeder
 	
 	rm -f $(DESTDIR)$(PREFIX)/bin/dnsseed
-	rm -f /etc/safecoin-seeder
+	rm -r /etc/safecoin-seeder
 	rm /etc/systemd/system/multi-user.target.wants/safecoin-seeder.service
 	rm /etc/systemd/system/safecoin-seeder.service
 	rm /etc/rsyslog.d/safecoin-seeder.conf
