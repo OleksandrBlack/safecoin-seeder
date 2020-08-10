@@ -22,7 +22,7 @@ install:
 	cp contrib/init/safecoin-seeder.conf /etc/safecoin-seeder/
 	ln -s /etc/safecoin-seeder/safecoin-seeder.service /etc/systemd/system/
 	ln -s /etc/safecoin-seeder/safecoin-seeder.service /etc/systemd/system/multi-user.target.wants/
-	ln -s /etc/safecoin-seeder/safecoin-seeder.conf /etc/systemd/resolved.conf.d/
+	ln -s /etc/safecoin-seeder/safecoin-seeder.conf /etc/rsyslog.d/
 
 	systemctl daemon-reload
 	systemctl stop systemd-resolved
@@ -37,7 +37,7 @@ uninstall:
 	rm -f /etc/safecoin-seeder
 	rm /etc/systemd/system/multi-user.target.wants/safecoin-seeder.service
 	rm /etc/systemd/system/safecoin-seeder.service
-	rm /etc/systemd/resolved.conf.d/safecoin-seeder.conf
+	rm /etc/rsyslog.d/safecoin-seeder.conf
 	
 	systemctl daemon-reload
 	systemctl restart systemd-resolved
