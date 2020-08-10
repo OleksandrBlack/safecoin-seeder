@@ -17,7 +17,27 @@ PREFIX = /usr/local
 install:
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
 	cp dnsseed $(DESTDIR)$(PREFIX)/bin
+	mkdir -p /etc/safecoin-seeder
+	cp contrib/init/safecoin-seeder.service /etc/safecoin-seeder/
+	cp contrib/init/safecoin-seeder.conf /etc/safecoin-seeder/
+	ln -s /etc/safecoin-seeder/safecoin-seeder.service /etc/systemd/system/
+	ln -s /etc/safecoin-seeder/safecoin-seeder.service /etc/systemd/system/multi-user.target.wants/
+	ln -s /etc/safecoin-seeder/safecoin-seeder.conf /etc/systemd/resolved.conf.d/
 
+	systemctl daemon-reload
+	systemctl stop systemd-resolved
+	systemctl start safecoin-seeder
+	systemctl start systemd-resolved
+	
 .PHONY: uninstall
 uninstall:
+	systemctl stop safecoin-seeder
+	
 	rm -f $(DESTDIR)$(PREFIX)/bin/dnsseed
+	rm -f /etc/safecoin-seeder
+	rm /etc/systemd/system/multi-user.target.wants/safecoin-seeder.service
+	rm /etc/systemd/system/safecoin-seeder.service
+	rm /etc/systemd/resolved.conf.d/safecoin-seeder.conf
+	
+	systemctl daemon-reload
+	systemctl restart systemd-resolved
