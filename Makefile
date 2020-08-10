@@ -19,10 +19,8 @@ install:
 	cp dnsseed $(DESTDIR)$(PREFIX)/bin
 	mkdir -p /etc/safecoin-seeder
 	cp contrib/init/safecoin-seeder.service /etc/safecoin-seeder/
-	cp contrib/init/safecoin-seeder.conf /etc/safecoin-seeder/
 	ln -s /etc/safecoin-seeder/safecoin-seeder.service /etc/systemd/system/
 	ln -s /etc/safecoin-seeder/safecoin-seeder.service /etc/systemd/system/multi-user.target.wants/
-	ln -s /etc/safecoin-seeder/safecoin-seeder.conf /etc/rsyslog.d/
 
 	systemctl daemon-reload
 	systemctl stop systemd-resolved
@@ -37,7 +35,6 @@ uninstall:
 	rm -r /etc/safecoin-seeder
 	rm /etc/systemd/system/multi-user.target.wants/safecoin-seeder.service
 	rm /etc/systemd/system/safecoin-seeder.service
-	rm /etc/rsyslog.d/safecoin-seeder.conf
 	
 	systemctl daemon-reload
 	systemctl restart systemd-resolved
