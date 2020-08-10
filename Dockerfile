@@ -1,35 +1,28 @@
-FROM alpine:3.7 as seed-build
+FROM zencash/gosu-base:1.11
 
-RUN apk update
-RUN apk --no-cache add autoconf 
-RUN apk --no-cache add automake 
-RUN apk --no-cache add boost-dev 
-RUN apk --no-cache add build-base 
-RUN apk --no-cache add openssl 
-RUN apk --no-cache add openssl-dev 
-ADD . /src
+# Install our build dependencies
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install apt-utils \
+    && DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install git build-essential libboost-all-dev libssl-dev ca-certificates wget \
 
-WORKDIR /src
+COPY . /usr/local/src
 
-# Needed to avoid an error compiling on alpine
-RUN sed -i -e 's/^inline//g' strlcpy.h
-
+WORKDIR /usr/local/src
+  
 RUN make
 
-FROM alpine:3.7
+FROM zencash/gosu-base:1.11
 
-COPY --from=seed-build /src/dnsseed /usr/local/bin/dnsseed
+# Install our run dependencies
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install apt-utils \
+    && DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install git build-essential libboost-all-dev libssl-dev ca-certificates wget \
 
-RUN apk --no-cache add \
-    libcrypto1.0 \
-    libstdc++
+WORKDIR /usr/local/bin
 
-ENV APP_DIRECTORY=/data
-
-WORKDIR ${APP_DIRECTORY}
-
-VOLUME ${APP_DIRECTORY}
+COPY --from=build /usr/local/src/dnsseed .
 
 EXPOSE 53
+EXPOSE 53/udp
 
-ENTRYPOINT ["dnsseed"]
+ENTRYPOINT ["./dnsseed"]
